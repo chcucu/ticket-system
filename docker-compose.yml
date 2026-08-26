@@ -1,0 +1,63 @@
+# ============================================================
+# 通用工单系统 - 一键部署编排
+# 用法：docker compose up -d --build
+# 访问：http://localhost:3000  （前端 + API 一体）
+# ============================================================
+services:
+  db:
+    image: mysql:8.0
+    container_name: ticket-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root_pass_change_me}
+      MYSQL_DATABASE: ${DB_NAME:-ticket_system}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data:/var/lib/mysql
+      # 首次启动自动执行建表脚本
+      - ./server/sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    container_name: ticket-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-root_pass_change_me}
+      DB_NAME: ${DB_NAME:-ticket_system}
+      # 品牌信息（开源自定义入口）
+      BRAND_NAME: ${BRAND_NAME:-工单系统}
+      BRAND_TEAM: ${BRAND_TEAM:-管理团队}
+      # SMTP —— 预留配置，填好即可自动发信
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_SECURE: ${MAIL_SECURE:-true}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # 管理员鉴权
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123456}
+      JWT_SECRET: ${JWT_SECRET:-please_change_me_to_a_long_random_string}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    volumes:
+      # 持久化上传的图片
+      - app_uploads:/app/uploads
+
+volumes:
+  db_data:
+  app_uploads:

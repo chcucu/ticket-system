@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+**/web-dist
+**/uploads
+**/uploads/*
+server/.env
+web/.env
+.git
+*.zip
+*.tgz
+.DS_Store
+npm-debug.log*
